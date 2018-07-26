@@ -5,23 +5,24 @@ class Game extends Component{
     state = {
         timer: '',
         finishTime: 0,
-        complexity: 100,
+        complexity: 10,
         opA: 0,
         opB: 0,
         opCode: '+',
         result: 0,
-        answer: 0,
+        answer: '',
         results: [],
-        score: 0
+        score: 0,
+        status: 'initial'
     };
 
     startPlay = () => {
         this.setState({
-            //finishTime: Date.parse(new Date()) + 120000
-            finishTime: Date.parse(new Date()) + 60000
+            finishTime: Date.parse(new Date()) + 120000
         });
         this.generateOperation();
         this.timer = setInterval(this.tick, 500);
+        this.setState({status: 'game'});
         
     }
 
@@ -65,7 +66,7 @@ class Game extends Component{
                 result = opA * opB;
                 break;
             default:
-                result = parseInt(opA/opB)
+                result = parseInt(opA/opB);
         }
         this.setState({
             opA, opB, opCode, result
@@ -85,9 +86,10 @@ class Game extends Component{
         });
     };
 
-    answer = () => {
-        console.log(this.state.answer);
+    answer = (event) => {
+        event.preventDefault();
         console.log(this.state.result);
+        console.log(parseInt(this.state.answer));
         console.log(parseInt(this.state.answer) === this.state.result);
         const submittedAnswer = {
             opA: this.state.opA,
@@ -100,18 +102,25 @@ class Game extends Component{
         results.push(submittedAnswer);
         this.setState({results});
         this.generateOperation();
+        this.setState({answer: ''});
+        
     }
 
     finishGame = () => {
         const results = this.state.results;
-        const score = results.map((element) => {
-            if(element.answer == element.result){
-                return this.state.complexity;
-            }
-            return 0;
-        }).reduce((a, b) => {
-            return a + b;
-        });
+        let score;
+        if(results.length > 0){
+            score = results.map((element) => {
+                if(element.answer === element.result){
+                    return this.state.complexity;
+                }
+                return 0;
+            }).reduce((a, b) => {
+                return a + b;
+            });
+        }else{
+            score = 0;
+        }
         this.setState({
             score, 
             timer: '',
@@ -121,21 +130,77 @@ class Game extends Component{
             opB: 0,
             opCode: '+',
             result: 0,
-            answer: 0
+            answer: 0,
+            status: 'done'
         });
     };
 
     render(){
         return(
-            <section className="container">
-                <div style={{ padding: '60px' }}>
-                    <a onClick={this.startPlay} className="button is-large is-fullwidth is-success">Start Playing!</a>
-                </div>
-                {this.state.timer}
-                <h1>{this.state.opA} {this.state.opCode} {this.state.opB}</h1>
-                <input  value={this.state.answer} onChange={event => this.setState({answer: event.target.value})}/>
-                <button className="button is-link" onClick={this.answer}>Answer</button>
-                <h1>Score: {this.state.score}</h1>
+            <section className="container" style={{ paddingTop: '60px' }}>
+                {
+                    this.state.status === 'initial' &&
+                    <div>
+                        <div className="field">
+                            <label className="label">Complexity: </label>
+                            <div className="control">
+                                <div className="select">
+                                    <select onChange={event => {this.setState({complexity: parseInt(event.target.value)})}}>
+                                        <option value="10">Mortal</option>
+                                        <option value="100">Magician</option>
+                                        <option value="1000">Wizard</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="control">
+                            <a onClick={this.startPlay} className="button is-large is-fullwidth is-success">Start Playing!</a>                    
+                        </div>
+                    </div>
+                }
+                {
+                    this.state.status === 'game' &&
+                    <div>
+                        <div className="field has-text-centered">                
+                            <label className="label">{this.state.timer}</label>
+                        </div>
+                        <div className="columns">
+                            <div className="column">
+                            </div>
+                            <div className="column">
+                                <div className="field has-text-centered">
+                                    <label className="label">{this.state.opA} {this.state.opCode} {this.state.opB}</label>
+                                </div>
+                                <form onSubmit={this.answer}>
+                                    <div className="field">
+                                        <input className="input" value={this.state.answer} onChange={event => this.setState({ answer: event.target.value })} />
+                                    </div>
+                                    <div className="control">
+                                        <button className="button is-link">Answer</button>
+                                    </div>
+                                </form> 
+                            </div>
+                            <div className="column">
+                            </div>
+                        </div>  
+                    </div>
+                }
+                {
+                    this.state.status === 'done' &&
+                    <section class="hero is-info is-large has-text-centered">
+                        <div class="hero-body">
+                            <div class="container">
+                                <h1 class="title">
+                                    Your Score
+                                </h1>
+                                <h2 class="subtitle">
+                                    {this.state.score}
+                                </h2>
+                            </div>
+                        </div>
+                    </section>     
+
+                }
             </section>
         );
     }
