@@ -40,6 +40,7 @@ The game generates random math operations, you'll have two minutes to solve the 
     - You'll get the contract address, copy and paste it inside `env.json`, using `contractAddress` property
     
 - Run Locally
+    - If you have deployed your own contract, copy the contract address inside `env.json` file, using `contractAddress` property, if not, use this one: `0x09FD98E959700b913C7A5eB8f9fBf37706D8E31C`.
     ```
         npm start
     ```
