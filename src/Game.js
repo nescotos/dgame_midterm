@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
-
+import web3 from './web3';
+import contract from './contract';
+import { Link } from 'react-router-dom';
 
 class Game extends Component{
     state = {
@@ -13,16 +15,32 @@ class Game extends Component{
         answer: '',
         results: [],
         score: 0,
-        status: 'initial'
+        status: 'initial',
+        account: '',
+        showNoAccountModal: false,
+        showInProgressModal: false
     };
 
-    startPlay = () => {
-        this.setState({
-            finishTime: Date.parse(new Date()) + 120000
-        });
-        this.generateOperation();
-        this.timer = setInterval(this.tick, 500);
-        this.setState({status: 'game'});
+    startPlay = async() => {
+        const accounts = await web3.eth.getAccounts();
+        let userExist = false;
+        if(accounts[0]){
+            userExist = await contract.methods.userExist(accounts[0])
+                .call();  
+        }
+        if (userExist){
+            this.setState({
+                finishTime: Date.parse(new Date()) + 120000,
+                account: accounts[0]
+            });
+            this.generateOperation();
+            this.timer = setInterval(this.tick, 500);
+            this.setState({ status: 'game' });
+        }else{
+            this.setState({
+                showNoAccountModal: true
+            });
+        }
         
     }
 
@@ -79,7 +97,6 @@ class Game extends Component{
         if(time <= 0){
             clearInterval(this.timer);
             this.finishGame();
-            alert('You are done!');
         }
         this.setState({
             timer: time
@@ -88,9 +105,6 @@ class Game extends Component{
 
     answer = (event) => {
         event.preventDefault();
-        console.log(this.state.result);
-        console.log(parseInt(this.state.answer));
-        console.log(parseInt(this.state.answer) === this.state.result);
         const submittedAnswer = {
             opA: this.state.opA,
             opB: this.state.opB,
@@ -106,7 +120,7 @@ class Game extends Component{
         
     }
 
-    finishGame = () => {
+    finishGame = async() => {
         const results = this.state.results;
         let score;
         if(results.length > 0){
@@ -122,6 +136,13 @@ class Game extends Component{
             score = 0;
         }
         this.setState({
+            showInProgressModal: true
+        });
+        await contract.methods.sendScore(score)
+            .send({
+                from: this.state.account
+            });
+        this.setState({
             score, 
             timer: '',
             finishTime: 0,
@@ -131,7 +152,8 @@ class Game extends Component{
             opCode: '+',
             result: 0,
             answer: 0,
-            status: 'done'
+            status: 'done',
+            showInProgressModal: false
         });
     };
 
@@ -141,6 +163,16 @@ class Game extends Component{
                 {
                     this.state.status === 'initial' &&
                     <div>
+                        <article className="message">
+                            <div className="message-header">
+                                <p>Instructions</p>
+                            </div>
+                            <div className="message-body">
+                                <p>Solve the greatest amount of math challenges in <strong>2 minutes</strong>; you'll have <strong>addition, substraction, multiplication and division.</strong></p>
+                                <p>Select a complexity, Mortal: numbers <strong>between 1 - 10</strong>; Magician: numbers <strong>between 1 - 100</strong> and Wizard <strong>between 1 - 1000</strong>.</p>
+                                <p>In the division your answer should be just the quotient: <i>i.e. 19/9 should be <strong>2</strong></i> and so on.</p>
+                            </div>
+                        </article>
                         <div className="field">
                             <label className="label">Complexity: </label>
                             <div className="control">
@@ -187,19 +219,45 @@ class Game extends Component{
                 }
                 {
                     this.state.status === 'done' &&
-                    <section class="hero is-info is-large has-text-centered">
-                        <div class="hero-body">
-                            <div class="container">
-                                <h1 class="title">
+                    <section className="hero is-info is-large has-text-centered">
+                        <div className="hero-body">
+                            <div className="container">
+                                <h1 className="title">
                                     Your Score
                                 </h1>
-                                <h2 class="subtitle">
+                                <h2 className="subtitle">
                                     {this.state.score}
                                 </h2>
                             </div>
                         </div>
                     </section>     
 
+                }                
+                { this.state.showNoAccountModal &&
+                    <div className="modal is-active">
+                        <div className="modal-background"></div>
+                        <div className="modal-content">
+                            <div className="box">
+                                <div className="content">
+                                    <p>You need an Account to Play this Game.</p>
+                                    <Link to="/registration" className="navbar-item">Go to registration</Link>
+                                </div>
+                            </div>
+                        </div>                        
+                    </div>
+                }
+                { this.state.showInProgressModal &&
+                    <div className="modal is-active">
+                        <div className="modal-background"></div>
+                        <div className="modal-content">
+                            <div className="box">
+                                <div className="content has-text-centered">
+                                    <p>We are saving your score, please hold on!</p>
+                                    <button className="button is-link is-loading"></button>
+                                </div>
+                            </div>
+                        </div>                        
+                    </div>
                 }
             </section>
         );
